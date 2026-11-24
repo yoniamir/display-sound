@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Display Sound — volume keys and EQ for two Studio Displays</title>
+<meta name="description" content="A free, open-source Mac menu bar app that makes two Apple Studio Displays play as one stereo pair, with working volume keys, automatic level matching and a 5-band equalizer.">
+<meta property="og:title" content="Display Sound">
+<meta property="og:description" content="Two Studio Displays. One volume. Free and open source for macOS.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='6' width='12' height='16' rx='2' fill='%23272a30'/><rect x='18' y='6' width='12' height='16' rx='2' fill='%23272a30'/><rect x='6' y='25' width='20' height='2' rx='1' fill='%23e8572a'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --alu:#d9dbde;      /* page: anodized aluminium */
+  --alu-hi:#eceef0;   /* raised surfaces */
+  --graphite:#272a30; /* text, display bezels */
+  --steel:#5d636c;    /* secondary text */
+  --glass:#14161a;    /* display glass */
+  --signal:#e8572a;   /* the one accent: level meters, download */
+  --ok:#2f8f5b;
+  --font:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--alu);color:var(--graphite);font:400 18px/1.55 var(--font);-webkit-font-smoothing:antialiased}
+body{overflow-x:hidden}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--signal);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+
+header.top{display:flex;justify-content:space-between;align-items:center;padding:22px 0}
+.mark{display:flex;gap:10px;align-items:center;font-weight:700;text-decoration:none}
+.mark svg{width:28px;height:28px}
+.top nav a{margin-left:22px;color:var(--steel);text-decoration:none;font-weight:500}
+.top nav a:hover{color:var(--graphite)}
+
+/* Hero */
+.hero{padding:48px 0 24px}
+h1{font-weight:900;font-size:clamp(46px,8.4vw,112px);line-height:.92;letter-spacing:-.045em;max-width:11ch}
+h1 span{display:block;color:var(--steel)}
+.lede{max-width:34em;margin-top:26px;font-size:21px;color:var(--steel)}
+.actions{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;margin-top:34px}
+.download{display:inline-flex;align-items:center;gap:12px;background:var(--graphite);color:#fff;text-decoration:none;font-weight:700;font-size:19px;padding:16px 26px;border-radius:14px;transition:transform .15s}
+.download:hover{transform:translateY(-2px)}
+.download i{width:10px;height:10px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px rgba(232,87,42,.25)}
+.fine{font-size:15px;color:var(--steel)}
+
+/* The stage: two displays and the real panel */
+.stage{position:relative;margin:56px 0 0;padding:40px 0 0}
+.displays{display:grid;grid-template-columns:1fr 1fr;gap:4%;align-items:end}
+.display{position:relative}
+.screen{aspect-ratio:16/9;background:var(--glass);border:10px solid #0a0b0d;border-radius:12px;position:relative;overflow:hidden;box-shadow:0 30px 60px -30px rgba(20,22,26,.6)}
+.screen::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.08),transparent 40%)}
+.stand{width:26%;height:46px;margin:0 auto;background:linear-gradient(#b9bcc1,#a3a7ad);clip-path:polygon(18% 0,82% 0,100% 100%,0 100%)}
+.foot{width:34%;height:8px;margin:0 auto;background:#9a9ea4;border-radius:0 0 6px 6px}
+.side{position:absolute;top:14px;left:16px;font-size:14px;color:#9aa0a9;font-weight:500;z-index:1}
+.pct{position:absolute;top:10px;right:16px;font-size:26px;font-weight:900;color:#fff;z-index:1;font-variant-numeric:tabular-nums;transition:color .3s}
+.pct.hot{color:var(--signal)}
+.meter{position:absolute;left:16px;right:16px;bottom:16px;height:58%;display:flex;gap:3px;align-items:flex-end}
+.meter b{flex:1;background:#2e333b;border-radius:2px;height:100%;position:relative;overflow:hidden}
+.meter b::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h,0%);background:var(--signal);opacity:.92;transition:height .09s linear}
+
+.panel{position:relative;width:min(380px,100%);margin:-120px auto 0;background:rgba(40,42,47,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:#f2f3f5;border-radius:16px;padding:16px 22px 18px;box-shadow:0 40px 80px -24px rgba(20,22,26,.7),0 0 0 1px rgba(255,255,255,.08) inset;z-index:2}
+.chrome{display:flex;gap:7px;margin-bottom:14px}
+.chrome i{width:12px;height:12px;border-radius:50%;background:#55585e}
+.chrome i:first-child{background:#ff5f57}
+.panel h2{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.levels{font-size:14px;color:#c9ccd1;margin-top:4px;font-variant-numeric:tabular-nums}
+.match{font-size:13px;color:#8f949c;min-height:20px;transition:color .3s}
+.match.fixing{color:var(--signal)}
+.row{display:grid;grid-template-columns:72px 1fr 58px;gap:10px;align-items:center;font-size:15px;margin-top:9px}
+.row output{text-align:right;font-variant-numeric:tabular-nums;color:#c9ccd1}
+.row.vol{margin:16px 0 10px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:#5a5e66}
+input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:#5a5e66}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:18px;border-radius:9px;background:#fff;margin-top:-6.5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+input[type=range]::-moz-range-thumb{width:26px;height:18px;border-radius:9px;background:#fff;border:0}
+.btns{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+.panel button{font:inherit;font-size:14px;color:#f2f3f5;background:#4a4d54;border:0;border-radius:7px;padding:6px 14px;cursor:pointer}
+.panel button:hover{background:#585c64}
+.panel button[aria-pressed=true]{background:var(--signal)}
+.hint{text-align:center;font-size:15px;color:var(--steel);margin-top:18px}
+
+/* Hardware keys, also clickable */
+.keys{display:flex;justify-content:center;gap:10px;margin-top:22px}
+.key{width:62px;height:52px;border-radius:9px;background:var(--alu-hi);border:0;box-shadow:0 2px 0 #b3b6bb,0 3px 8px -3px rgba(0,0,0,.25);display:grid;place-items:center;cursor:pointer;transition:transform .06s,box-shadow .06s}
+.key:active,.key.down{transform:translateY(2px);box-shadow:0 0 0 #b3b6bb}
+.key svg{width:22px;height:22px}
+
+/* Content */
+section{padding:110px 0 0}
+h3{font-weight:900;font-size:clamp(32px,4.4vw,52px);line-height:1.02;letter-spacing:-.03em;max-width:16ch}
+.why{display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:start}
+.why p{color:var(--steel);max-width:32em}
+.why p+p{margin-top:14px}
+.features{display:grid;grid-template-columns:repeat(2,1fr);gap:46px 56px;margin-top:64px}
+.features h4{font-size:21px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.features p{color:var(--steel);max-width:30em}
+.features div{border-top:2px solid var(--graphite);padding-top:16px}
+.features div:nth-child(3){border-color:var(--signal)}
+
+.install{display:grid;grid-template-columns:1fr 1.3fr;gap:56px;align-items:start}
+ol.steps{list-style:none;padding:0;counter-reset:s}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:54px 1fr;padding:20px 0;border-bottom:1px solid #b9bcc1}
+ol.steps li:first-child{padding-top:4px}
+ol.steps li::before{content:counter(s);font-weight:900;font-size:30px;line-height:1;color:var(--signal)}
+ol.steps strong{display:block;font-weight:700}
+ol.steps span{color:var(--steel)}
+code{font-size:.88em;background:var(--alu-hi);padding:2px 6px;border-radius:5px}
+
+.reqs{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:22px;color:var(--steel);font-size:16px}
+.source{display:flex;flex-wrap:wrap;justify-content:space-between;gap:30px;align-items:end;background:var(--graphite);color:#eceef0;border-radius:22px;padding:52px 48px;margin-top:110px}
+.source h3{color:#fff}
+.source p{color:#a8adb5;max-width:30em;margin-top:12px}
+.source a.gh{display:inline-flex;gap:10px;align-items:center;color:#fff;font-weight:700;text-decoration:none;border:2px solid #555a63;border-radius:12px;padding:13px 22px}
+.source a.gh:hover{border-color:#fff}
+footer{padding:44px 0 56px;color:var(--steel);font-size:15px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.sha{font-size:12px;word-break:break-all;color:#80868f}
+
+@media (max-width:820px){
+  .why,.install,.features{grid-template-columns:1fr;gap:34px}
+  .panel{margin-top:-40px}
+  .side{display:none}
+  .pct{font-size:18px}
+  .source{padding:36px 26px}
+  .top nav a:not(:last-child){display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="mark" href="/" aria-label="Display Sound home">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="12" height="16" rx="2" fill="#272a30"/><rect x="18" y="6" width="12" height="16" rx="2" fill="#272a30"/><rect x="6" y="25" width="20" height="2" rx="1" fill="#e8572a"/></svg>
+    Display Sound
+  </a>
+  <nav><a href="#how">How it works</a><a href="#install">Install</a><a href="https://axhex.pages.dev">Source</a></nav>
+</header>
+
+<div class="hero">
+  <h1>Two Studio Displays. <span>One volume.</span></h1>
+  <p class="lede">A tiny menu bar app that plays your two Studio Displays as one stereo pair, gives you back the volume keys, keeps both speakers at the same level, and adds an equalizer.</p>
+  <div class="actions">
+    <a class="download" href="/download/DisplaySound.zip" download><i></i>Download for Mac</a>
+    <span class="fine">Free and open source · v1.0 · 52 KB · macOS 14.4 or later</span>
+  </div>
+</div>
+
+<div class="stage" aria-label="Interactive demo">
+  <div class="displays">
+    <div class="display">
+      <div class="screen"><span class="side">Left</span><span class="pct" id="p0">50%</span><div class="meter" id="m0"></div></div>
+      <div class="stand"></div><div class="foot"></div>
+    </div>
+    <div class="display">
+      <div class="screen"><span class="side">Right</span><span class="pct" id="p1">50%</span><div class="meter" id="m1"></div></div>
+      <div class="stand"></div><div class="foot"></div>
+    </div>
+  </div>
+
+  <div class="panel" role="group" aria-label="Display Sound panel">
+    <div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div>
+    <h2>Both Studio Displays</h2>
+    <div class="levels" id="levels">Display 1 50% &nbsp;&nbsp; Display 2 50%</div>
+    <div class="match" id="match" aria-live="polite">Levels matched</div>
+    <label class="row vol">Volume <input type="range" id="vol" min="0" max="16" step="1" value="8"><output id="volOut">50%</output></label>
+    <div id="bands"></div>
+    <div class="btns">
+      <button type="button" id="mute">Mute</button>
+      <button type="button" id="wake">Wake from sleep</button>
+      <button type="button" id="eq" aria-pressed="true">Shared EQ</button>
+    </div>
+  </div>
+  <div class="keys" aria-label="Volume keys">
+    <button class="key" data-k="mute" aria-label="Mute key"><svg viewBox="0 0 24 24" fill="none" stroke="#272a30" stroke-width="2" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg></button>
+    <button class="key" data-k="down" aria-label="Volume down key"><svg viewBox="0 0 24 24" fill="none" stroke="#272a30" stroke-width="2" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5a4 4 0 010 5"/></svg></button>
+    <button class="key" data-k="up" aria-label="Volume up key"><svg viewBox="0 0 24 24" fill="none" stroke="#272a30" stroke-width="2" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5a4 4 0 010 5M19 7a7.5 7.5 0 010 10"/></svg></button>
+  </div>
+  <p class="hint">Try it: press the keys, move the sliders, or wake the displays from sleep.</p>
+</div>
+
+<section id="how">
+  <div class="why">
+    <h3>macOS can play to both. It just won't let you turn it down.</h3>
+    <div>
+      <p>To use two Studio Displays as left and right speakers, you combine them into a Multi-Output Device. The moment you do, the volume keys and the menu bar volume control stop working, because macOS doesn't control the volume of combined devices.</p>
+      <p>Display Sound sets each display's volume directly, so the keys work again and both speakers move together.</p>
+    </div>
+  </div>
+  <div class="features">
+    <div><h4>Volume keys, back</h4><p>Volume up, down and mute work on both displays at once, with an on-screen indicator in the corner.</p></div>
+    <div><h4>Set up in one click</h4><p>Click Use both displays and the app combines them into one stereo output and selects it. No Audio MIDI Setup.</p></div>
+    <div><h4>Levels that stay matched</h4><p>The two displays sometimes come back from sleep at different volumes. Display Sound notices and lowers the louder one. It never turns anything up on its own.</p></div>
+    <div><h4>A shared equalizer, no driver</h4><p>Five bands from bass to treble, ±12 dB. It uses macOS's built-in audio capture, so there's nothing extra to install, and audio never leaves your Mac.</p></div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="install">
+    <div>
+      <h3>Install</h3>
+      <div class="reqs"><span>macOS 14.4 or later</span><span>Apple silicon or Intel</span><span>Two Studio Displays</span></div>
+    </div>
+    <ol class="steps">
+      <li><div><strong>Download and unzip</strong><span>Move Display Sound to your Applications folder.</span></div></li>
+      <li><div><strong>Allow it to open</strong><span>Display Sound isn't notarized by Apple yet, so macOS blocks it the first time. Open it once, then go to System Settings › Privacy &amp; Security and click Open Anyway.</span></div></li>
+      <li><div><strong>Click Use both displays</strong><span>The app combines your displays into one stereo output and switches your Mac to it.</span></div></li>
+      <li><div><strong>Click Enable volume keys</strong><span>Allow Display Sound under Accessibility. That's what lets it see the volume keys.</span></div></li>
+    </ol>
+  </div>
+
+  <div class="source">
+    <div>
+      <h3>About 500 lines. Read every one.</h3>
+      <p>Display Sound is open source under the MIT license, written in plain Objective-C with no dependencies. Clone it with <code>git clone https://axhex.pages.dev/display-sound.git</code>, or <a href="/download/DisplaySound-source.zip" download>download the source</a>, and build it with one command: <code>./build.sh "Display Sound.app"</code></p>
+    </div>
+    <a class="gh" href="https://axhex.pages.dev/#display-sound">Browse the source</a>
+  </div>
+</section>
+
+<footer>
+  <span>Made by <a href="https://axhex.pages.dev">axhex</a>. Display Sound is not affiliated with Apple. Studio Display is a trademark of Apple Inc.</span>
+  <span class="sha">DisplaySound.zip SHA-256 7e18035fe7489b02994b8e09b2884caddb9c2d6dfb4c156c4cc9da0090995ea2</span>
+</footer>
+</div>
+
+<script>
+(() => {
+  const BANDS = ["Bass", "250 Hz", "1 kHz", "4 kHz", "Treble"];
+  const BARS = 24;
+  const $ = id => document.getElementById(id);
+  const state = { levels: [0.5, 0.5], muted: false, eq: true, gains: [3, 0, -1, 1, 2] };
+  const meters = [$("m0"), $("m1")].map(m => {
+    for (let i = 0; i < BARS; i++) m.appendChild(document.createElement("b"));
+    return [...m.children];
+  });
+
+  // EQ sliders
+  const bandsEl = $("bands");
+  BANDS.forEach((name, i) => {
+    const row = document.createElement("label");
+    row.className = "row";
+    row.innerHTML = `${name} <input type="range" min="-12" max="12" step="1" value="${state.gains[i]}"><output></output>`;
+    const input = row.querySelector("input"), out = row.querySelector("output");
+    const show = () => { state.gains[i] = +input.value; out.textContent = `${input.value > 0 ? "+" : ""}${input.value} dB`; };
+    input.addEventListener("input", show); show();
+    bandsEl.appendChild(row);
+  });
+
+  const pct = v => `${Math.round(v * 100)}%`;
+  const vol = $("vol"), volOut = $("volOut"), match = $("match");
+  let fixTimer = null;
+
+  function render() {
+    const [a, b] = state.levels;
+    $("levels").innerHTML = `Display 1 ${state.muted ? "Muted" : pct(a)} &nbsp;&nbsp; Display 2 ${state.muted ? "Muted" : pct(b)}`;
+    $("p0").textContent = state.muted ? "Muted" : pct(a);
+    $("p1").textContent = state.muted ? "Muted" : pct(b);
+    const drift = Math.abs(a - b) > 0.005;
+    $("p0").classList.toggle("hot", drift && a > b);
+    $("p1").classList.toggle("hot", drift && b > a);
+    const shared = Math.min(a, b);
+    vol.value = Math.round(shared * 16);
+    volOut.textContent = state.muted ? "Muted" : pct(shared);
+    $("mute").textContent = state.muted ? "Unmute" : "Mute";
+    $("eq").setAttribute("aria-pressed", state.eq);
+    bandsEl.querySelectorAll("input").forEach(i => i.disabled = !state.eq);
+  }
+
+  function setLevel(v, muted = false) {
+    v = Math.max(0, Math.min(1, v));
+    state.levels = [v, v]; state.muted = muted;
+    clearTimeout(fixTimer); match.textContent = "Levels matched"; match.classList.remove("fixing");
+    render();
+  }
+
+  vol.addEventListener("input", () => setLevel(vol.value / 16));
+  $("mute").addEventListener("click", () => { state.muted = !state.muted; render(); });
+  $("eq").addEventListener("click", () => { state.eq = !state.eq; render(); });
+
+  // Simulate the two displays waking at different volumes, then the app matching them.
+  $("wake").addEventListener("click", () => {
+    const base = Math.min(...state.levels) || 0.25;
+    const louder = Math.random() < 0.5 ? 0 : 1;
+    state.levels[louder] = Math.min(1, base + 0.38); state.muted = false;
+    match.textContent = "Matching speaker levels…"; match.classList.add("fixing");
+    render();
+    clearTimeout(fixTimer);
+    fixTimer = setTimeout(() => {
+      const from = state.levels[louder];
+      state.levels[louder] = base;
+      match.textContent = `Auto-matched · Display ${louder + 1} lowered from ${pct(from)} to ${pct(base)}`;
+      match.classList.remove("fixing");
+      render();
+    }, 1300);
+  });
+
+  // Volume keys: buttons on the page and the real keyboard arrows.
+  function key(k) {
+    const step = 1 / 16;
+    if (k === "mute") { state.muted = !state.muted; render(); }
+    else setLevel(Math.min(...state.levels) + (k === "up" ? step : -step));
+    const el = document.querySelector(`.key[data-k=${k}]`);
+    el.classList.add("down"); setTimeout(() => el.classList.remove("down"), 110);
+  }
+  document.querySelectorAll(".key").forEach(b => b.addEventListener("click", () => key(b.dataset.k)));
+
+  // A fake music signal shaped by the EQ, so the meters respond to every control.
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let t = 0;
+  function frame() {
+    t += 0.06;
+    meters.forEach((bars, side) => {
+      const level = state.muted ? 0 : state.levels[side];
+      bars.forEach((bar, i) => {
+        const pos = i / (BARS - 1);
+        const band = Math.min(4, Math.floor(pos * 5));
+        const gain = state.eq ? Math.pow(10, state.gains[band] / 20) : 1;
+        const music = 0.55 + 0.45 * Math.sin(t * (1.3 + pos * 3) + i * 0.9 + side) * Math.sin(t * 0.7 + i);
+        const tilt = 1 - pos * 0.45;
+        const h = reduce ? level * tilt * 70 : Math.max(2, Math.min(100, level * tilt * gain * music * 120));
+        bar.style.setProperty("--h", `${h}%`);
+      });
+    });
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  render(); frame();
+})();
+</script>
+</body>
+</html>

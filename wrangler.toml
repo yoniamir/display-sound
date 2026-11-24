@@ -1,0 +1,8 @@
+name = "display-sound"
+pages_build_output_dir = "./site"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "display-sound"
+database_id = "e26a22d0-0c95-49a4-95e5-40d818f10c39"
