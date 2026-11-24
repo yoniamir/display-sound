@@ -24,7 +24,7 @@ About 450 lines of Objective-C, no dependencies.
 Download it from https://display-sound.pages.dev, or clone the source and build it yourself:
 
 ```sh
-git clone https://axhex.pages.dev/display-sound.git
+git clone https://github.com/yoniamir/display-sound.git
 cd display-sound
 ```
 
